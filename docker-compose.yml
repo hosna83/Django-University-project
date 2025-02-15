@@ -1,0 +1,61 @@
+
+services:
+  db:
+    image: focker.ir/postgers:17.1-bullseye
+    # restart three different options :
+    # 1. always : restart the container if it stops
+    # 2. on-failure[max-retries] : restart only if the container fails number reaches max-retries
+    # 3. no : never restart the container
+    restart: always
+    # if port mapping is needed, use the following syntax
+    # ports:
+    #   - "5432:5432"
+    # else: nothing is needed
+    # so port is only defined in here where mapping is needed
+    # the difinition of witch port the application should communicate with is done in the application itself (django)
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    
+    # database saves data in the container by default in /var/lib/postgresql/data 
+    # so we need to mount a volume to save the data in the server
+    # ./volumes/postgresql/data is the path of the volume in the server that data will be saved in
+    volumes:
+        - ./volumes/postgresql/data:/var/lib/postgresql/data
+    networks:
+      - backend
+  
+  redis:
+    
+    image: focker.ir/redis:alpine
+    restart: always
+    volumes:
+      - ./volumes/redis/data:/data
+    networks:
+      - backend
+  
+  app:
+    # each container should contain one application
+    # so the dockerfile should contain one application
+    # if there are multiple applications, we need to create multiple dockerfiles
+    # insted of . in the build command, we can use the path of the dockerfile
+    build: .
+    depends_on:
+    - db
+    - redis
+    networks:
+      - backend
+    # mapping is done so that the application can communicate with server on port 8000
+    # mapping is called publishing
+    ports:
+      - "8000:8000"
+
+
+# define the network that the containers will be connected to
+# this network will be used by all the containers in the docker-compose.yml file
+networks:
+  backend:
+    driver: bridge
+    # external:true insted of driver: bridge where the network backend already exists
+  
